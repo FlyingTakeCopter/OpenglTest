@@ -11,6 +11,7 @@ public class ShaderHelper {
 
     public static int compileVertexShader(String shaderCode){
         return compileShader(GLES20.GL_VERTEX_SHADER, shaderCode);
+
     }
 
     public static int compileFragmentShader(String shaderCode){
