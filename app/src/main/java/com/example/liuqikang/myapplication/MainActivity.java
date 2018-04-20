@@ -14,7 +14,7 @@ public class MainActivity extends AppCompatActivity {
         view = new GLSurfaceView(this);
         // 启动GLES20
         view.setEGLContextClientVersion(2);
-        view.setRenderer(new TestRender(this));
+        view.setRenderer(new TestColorRender(this));
 
         setContentView(view);
 
