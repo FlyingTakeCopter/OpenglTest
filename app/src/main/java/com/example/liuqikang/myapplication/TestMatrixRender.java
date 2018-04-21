@@ -19,7 +19,7 @@ import javax.microedition.khronos.opengles.GL10;
  * Created by liuqikang on 2018/4/20.
  */
 
-public class TestColorRender implements GLSurfaceView.Renderer {
+public class TestMatrixRender implements GLSurfaceView.Renderer {
     private Context mContext;
     // 每个顶点的坐标数量
     private static final int POISTION_COMPONET_COUNT = 2;
@@ -41,18 +41,22 @@ public class TestColorRender implements GLSurfaceView.Renderer {
     // 顶点
     private final static String A_POSITION = "a_Position";
     private int aPositionLocation;
+    // 矩阵
+    private final static String U_MATRIX = "u_Matrix";
+    private int uMatrixLocation;
+    // 4*4单位矩阵空间
+    private final float[] projectionMatrix = new float[16];
 
-
-    TestColorRender(Context cxt){
+    TestMatrixRender(Context cxt){
         this.mContext = cxt;
         float[] tableVerticesWithTriangles = {
                 // X    Y       R     G     B
                 0.0f,  0.0f,    1f, 1f, 1f,
-                -0.5f, -0.5f,    0.7f, 0.7f, 0.7f,
-                0.5f,  -0.5f,    0.7f, 0.7f, 0.7f,
-                0.5f,  0.5f,    0.7f, 0.7f, 0.7f,
-                -0.5f, 0.5f,    0.7f, 0.7f, 0.7f,
-                -0.5f, -0.5f,    0.7f, 0.7f, 0.7f,
+                -0.5f, -0.8f,    0.7f, 0.7f, 0.7f,
+                0.5f,  -0.8f,    0.7f, 0.7f, 0.7f,
+                0.5f,  0.8f,    0.7f, 0.7f, 0.7f,
+                -0.5f, 0.8f,    0.7f, 0.7f, 0.7f,
+                -0.5f, -0.8f,    0.7f, 0.7f, 0.7f,
 
                 -0.5f, 0f,      1f, 0f, 0f,
                 0.5f,  0f,      1f, 0f, 0f,
@@ -71,7 +75,7 @@ public class TestColorRender implements GLSurfaceView.Renderer {
     @Override
     public void onSurfaceCreated(GL10 gl, EGLConfig config) {
         GLES20.glClearColor(0.0f, 0.0f,0.0f,0.0f);
-        String vertexShaderSource = TextResourceReader.readTextFileFromResource(mContext, R.raw.simple_vertex_sharder_4);
+        String vertexShaderSource = TextResourceReader.readTextFileFromResource(mContext, R.raw.simple_vertex_sharder_5);
         String fragmentShaderSource = TextResourceReader.readTextFileFromResource(mContext, R.raw.simple_fragment_shader_4);
 
         int vertextShader = ShaderHelper.compileVertexShader(vertexShaderSource);
@@ -86,6 +90,8 @@ public class TestColorRender implements GLSurfaceView.Renderer {
         aColorLocation = GLES20.glGetAttribLocation(program, A_COLOR);
         // 查询顶点着色器
         aPositionLocation = GLES20.glGetAttribLocation(program, A_POSITION);
+        // 查询矩阵uniform
+        uMatrixLocation = GLES20.glGetUniformLocation(program, U_MATRIX);
 
         // 保证从头读取
         vertexData.position(0);
@@ -105,11 +111,24 @@ public class TestColorRender implements GLSurfaceView.Renderer {
     @Override
     public void onSurfaceChanged(GL10 gl, int width, int height) {
         GLES20.glViewport(0,0,width,height);
+        // 根据屏幕当前宽高比，创建正交投影矩阵
+        // 计算宽高比
+        final float aspectRatio = width > height ?
+                (float) width / (float) height :
+                (float) height / (float) width;
+
+        if (width > height){
+            Matrix.orthoM(projectionMatrix, 0, -aspectRatio, aspectRatio, -1f, 1f, -1f, 1f);
+        }else{
+            Matrix.orthoM(projectionMatrix, 0, -1f, 1f, -aspectRatio, aspectRatio, -1f, 1f);
+        }
     }
 
     @Override
     public void onDrawFrame(GL10 gl) {
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
+        // 给着色器传递正交投影矩阵
+        GLES20.glUniformMatrix4fv(uMatrixLocation, 1, false, projectionMatrix, 0);
 
         // 绘制类型，开始顶点，读取个数
         GLES20.glDrawArrays(GLES20.GL_TRIANGLE_FAN, 0 , 6);    // 前六个顶点绘制三角形

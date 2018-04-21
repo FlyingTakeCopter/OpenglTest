@@ -14,8 +14,15 @@ public class MainActivity extends AppCompatActivity {
         view = new GLSurfaceView(this);
         // 启动GLES20
         view.setEGLContextClientVersion(2);
-        view.setRenderer(new TestColorRender(this));
-
+        // 第三章
+//        view.setRenderer(new TestRender(this));
+        // 第四章
+//        view.setRenderer(new TestColorRender(this));
+        // 第五章
+//        view.setRenderer(new TestMatrixRender(this));
+        // 第六章
+//        view.setRenderer(new Test3DRender_w(this));   // w分量测试
+        view.setRenderer(new Test3DRender_Matrix(this));    // 投影矩阵测试
         setContentView(view);
 
     }
