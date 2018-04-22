@@ -24,7 +24,9 @@ public class MainActivity extends AppCompatActivity {
 //        view.setRenderer(new Test3DRender_w(this));   // w分量测试
 //        view.setRenderer(new Test3DRender_Matrix(this));    // 投影矩阵测试
         // 第七章
-        view.setRenderer(new TestTextureRender(this));
+//        view.setRenderer(new TestTextureRender(this));
+        // 第十章
+        view.setRenderer(new TestParticleRender(this));
         setContentView(view);
 
     }

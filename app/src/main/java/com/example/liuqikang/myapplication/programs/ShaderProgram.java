@@ -20,6 +20,11 @@ public class ShaderProgram {
     protected static final String A_COLOR = "a_Color";
     protected static final String A_TEXTURE_COORDINATES = "a_TextureCoordinates";
 
+    // particle粒子系统专用
+    protected static final String U_TIME = "u_Time";
+    protected static final String A_DIRECTION_VECTOR = "a_DirectionVector";
+    protected static final String A_PARTICLE_START_TIME = "a_ParticleStartTime";
+
     // shader program
     protected final int program;
     protected ShaderProgram(Context cxt, int vertexShaderResourceID,

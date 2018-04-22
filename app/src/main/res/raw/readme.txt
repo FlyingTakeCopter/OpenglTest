@@ -187,7 +187,7 @@ private static final float[] VERTEX_DATA = {
 如何依旧使用0和1作为坐标?
 纹理预拉伸
 
-
+10 粒子(particles)
 
 
 
