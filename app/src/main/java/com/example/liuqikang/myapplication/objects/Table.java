@@ -4,6 +4,7 @@ import android.opengl.GLES20;
 
 import com.example.liuqikang.myapplication.Constants;
 import com.example.liuqikang.myapplication.data.VertexArray;
+import com.example.liuqikang.myapplication.programs.TextureShaderProgram;
 
 /**
  * Created by Administrator on 2018/4/22.
@@ -32,8 +33,16 @@ public class Table {
         vertexArray = new VertexArray(VERTEX_DATA);
     }
 
-    public void bindData(){
-
+    public void bindData(TextureShaderProgram textureShaderProgram){
+        vertexArray.setVertexAttributePointer(
+                0, textureShaderProgram.getPositionLocation(),
+                POSITION_COMPONENT_COUNT,
+                STRIDE);
+        vertexArray.setVertexAttributePointer(
+                POSITION_COMPONENT_COUNT,
+                textureShaderProgram.getTextureCoordinatesLocation(),
+                TEXTURE_COORDINATES_COUNT,
+                STRIDE);
     }
 
     public void draw(){
