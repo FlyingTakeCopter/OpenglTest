@@ -1,3 +1,20 @@
+第一章 GLSurfaceView
+GLSurfaceView会处理Opengl初始化过程中比较基本的操作，
+如配置显示设备以及后台线程中渲染;渲染是指在显示设备中一个称谓surface的特定区域完成的，也成视口
+GLSurfaceView绑定activity生命周期，包括OpenGL的创建、销毁、暂停、resume等辅助方法
+
+在幕后，GLSurfaceView是加上为它自己创建了一个窗口window，并且在试图层次（View Hierarchy）上穿了个洞，
+让底层的Opengl surface显示出来，对于大多数情况，这就足够了，
+但是，GLSurfaceView与常规的View不同，他没有动画或者变形特效，因为GLSurfaceView是窗口的一部分
+
+从4.0开始，android提供了一个纹理试图TextureView，它可以渲染Opengl而不用创建单独的窗口或打洞了，
+这就意味着这个视图像一个常规窗口一样，可以被操作，且有动画和变形特效。但是TextureView没有内置Opengl初始化操作
+想要使用TextureView，一种方法是执行自定义的Opengl初始化，并在TextureView上运行，
+另外一种方法是把GLSurfaceView的源代码拿出来，把它适配到TextureView上
+
+第二章 坐标顶点
+Android屏幕原点在左上角
+
 第五章 Martix
 单位矩阵：
 1   0   0   0
