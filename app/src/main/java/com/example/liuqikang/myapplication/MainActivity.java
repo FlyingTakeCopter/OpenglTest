@@ -12,8 +12,11 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
 
         view = new GLSurfaceView(this);
-        // 启动GLES20
+        // request opengles 2.0 compatible context
         view.setEGLContextClientVersion(2);
+
+        // Assign renderer
+        view.setRenderer(new FirstOpenglProjectRender());
         // 第三章
 //        view.setRenderer(new TestRender(this));
         // 第四章
@@ -26,7 +29,7 @@ public class MainActivity extends AppCompatActivity {
         // 第七章
 //        view.setRenderer(new TestTextureRender(this));
         // 第十章
-        view.setRenderer(new TestParticleRender(this));
+//        view.setRenderer(new TestParticleRender(this));
         setContentView(view);
 
     }
@@ -42,4 +45,10 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
         view.onResume();
     }
+
+    // GLSurfaceView 在一个单独的线程中调用渲染器方法（后台线程，非UI线程）
+    // 所以只能在渲染线程中调用opengl绘制
+    // 线程通信
+    // 从UI线程到GLSurfaceView渲染线程使用 GLSurfaceView.queueEvent(Runable)
+    // 从渲染线程到UI线程使用 Activity.runOnUiThread
 }
