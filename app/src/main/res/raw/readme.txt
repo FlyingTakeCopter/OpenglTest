@@ -15,6 +15,64 @@ GLSurfaceView绑定activity生命周期，包括OpenGL的创建、销毁、暂�
 第二章 坐标顶点
 Android屏幕原点在左上角
 
+opengl只能绘制点、直线、三角形，三角形是最基本的图像
+当我们定义三角形的时候总是以逆时针的顺序排列到顶点，这成为卷曲顺序，可以优化性能
+使用卷曲顺序可以指出一个三角形属于任何指定物体的前面或者后面，opengl可以忽略哪些无论如何都无法被看到的后面的三角形
+
+Android是运行在虚拟机上的程序，所以不必关心特定的CPU或者机器架构，也不必关心底层的内存管理
+这通常都能做的很好，除非要与本地系统交互，比如opengl
+opengl作为本地系统库直接运行在硬件上，没有虚拟机，也没有垃圾回收和内存管理
+
+那么Java如何与本地的opengl进行通信呢？两种技术
+第一种，JNI 使用JNI调用本地系统库
+第二种，改变内存分配的方式，
+Java有一个特殊的类集合(FloatBuffer)，他们可以分配本地的内存块，并且把JAVA的数据复制到本地内存
+本地内存可以被本地环境读取，而不受垃圾回收器的管控
+
+FloatBuffer vertexData = ByteBuffer
+                .allocateDirect(tableVertices.length * BYTES_PER_FLOAT)
+                .order(ByteOrder.nativeOrder())
+                .asFloatBuffer();
+        vertexData.put(tableVertices);
+
+FloatBuffer用来在本地内存中存储数据，而不是在虚拟机汇总
+本地存储是为了方便本地系统库中的opengl进行访问
+allocateDirect分配一块本地内存，这块内存不受虚拟机管控，不会被垃圾回收
+order 告诉字节缓冲区(byte buffer)按照本地字节序(nativeOrder)组织它的内容
+      本地字节序是指，当一个值占用多个字节时，比如32位整数，字节按照最重要位置到最不重要位或者相反
+      这个排序并不重要，但是重要的是作为一个平台要使用同样的排序
+      order(ByteOrder.nativeOrder())能保证这一点
+asFloatBuffer() 我们不愿直接操作单独的字节，而是希望使用浮点数，
+                因此，调用asFloatBuffer()可以得到一个可以反映底层字节的FloatBuffer实例
+然后就可以使用put方法把数据从虚拟机内存复制到本地内存了。当进程结束的时候，这块内存会被释放
+但是随着程序运行产生了很多的ByteBuffer，需要堆碎片化以及内存管理的技术
+
+字节序：字节序是描述一个硬件架构是如何组织位(bit)和字节(byte)的方式，他们在底层组成一个数字
+大头架构
+小头架构
+
+顶点着色器 vertex shader 生成每个顶点的最终位置，针对每个顶点，他都会执行一次，
+一旦最终位置确定了，opengl就可以把这些可见的顶点的集合组装成点、直线以及三角形
+
+片元着色器 fragment shader 为组成点、直线或者三角形的每个片段生成最终的颜色，针对每一个片段，它都会执行一次
+一个片段是一个小的、单一颜色的长方形区域，类似于计算机屏幕上的一个像素
+
+一旦最后颜色生成了，opengl就会把他们写到一块成为帧缓冲区(frame buffer)的内存块中
+然后，android会把这个帧缓冲区显示到屏幕上
+
+opengl管道描述
+读取顶点数据-》执行顶点着色器-》组装图元-》光栅化图元-》执行片段着色器-》写入帧缓冲区-》显示在屏幕上
+
+最简单的顶点着色器
+每一个定义过得单一顶点，顶点着色器都会被调用一次
+attribute vec4 a_Position;
+void main(){
+    gl_Position = a_Position;
+}
+a_Position:接受当前顶点位置
+vec4:包含4个分量 x,y,z,w 默认情况下为 0,0,0,1
+attribute:关键字，用来传值
+
 第五章 Martix
 单位矩阵：
 1   0   0   0
