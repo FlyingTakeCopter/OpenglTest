@@ -12,7 +12,7 @@ GLSurfaceView绑定activity生命周期，包括OpenGL的创建、销毁、暂�
 想要使用TextureView，一种方法是执行自定义的Opengl初始化，并在TextureView上运行，
 另外一种方法是把GLSurfaceView的源代码拿出来，把它适配到TextureView上
 
-第二章 坐标顶点
+第二章 opengl 基础知识
 Android屏幕原点在左上角
 
 opengl只能绘制点、直线、三角形，三角形是最基本的图像
@@ -61,7 +61,8 @@ asFloatBuffer() 我们不愿直接操作单独的字节，而是希望使用浮�
 然后，android会把这个帧缓冲区显示到屏幕上
 
 opengl管道描述
-读取顶点数据-》执行顶点着色器-》组装图元-》光栅化图元-》执行片段着色器-》写入帧缓冲区-》显示在屏幕上
+读取顶点数据-》执行顶点着色器-》组装图元-》光栅化图元-》
+执行片段着色器-》写入帧缓冲区-》显示在屏幕上
 
 最简单的顶点着色器
 每一个定义过得单一顶点，顶点着色器都会被调用一次
@@ -72,6 +73,105 @@ void main(){
 a_Position:接受当前顶点位置
 vec4:包含4个分量 x,y,z,w 默认情况下为 0,0,0,1
 attribute:关键字，用来传值
+
+片元着色器
+precision mediump float;
+uniform vec4 u_Color;
+void main()
+{
+    gl_FragColor = u_Color;
+}
+precision: 精度限定符，可以选择lowp,mediump和highp
+为什么顶点着色器没有定义精度呢？
+顶点着色器同样可以改变默认精度，但是，对于一个顶点的位置而言，精度是最重要的，
+Opengl的设计者决定把顶点着色器的精度默认设置成最高级别---highp
+高精度数据类型更加精确，但是这是以降低性能为代价的；
+对于片元着色器，出于最大的兼容性考虑，选择了mediump，这也是基于速度与质量的权衡
+
+uniform:传递值
+gl_GragColor:当前片/像素最终显示的颜色
+
+第三章 opengl绘图
+加载着色器
+// 读取文本
+public static String readTextFileFromResource(context, id){
+    StringBuilder body = new StringBuilder();
+    try{
+        InputStream is = context.getResource().openRawResource(id);
+        InputStreamReader isr = new InputStreamReader(is);
+        BufferedReader br = new BufferedReader(isr);
+        String line;
+        while((line = br.readLine()) != null){
+            body.append(line);
+            body.append(''\n');
+        }
+    }catch(e){
+
+    }
+    return body.toString();
+}
+// 着色器编译
+private static int compileShader(int type, String shaderCode){
+    // 创建着色器对象，获取创建的着色器对象编号
+    final int shaderObjectId = glCreateShader(type);
+    if(shaderObjectId == 0){创建失败，通过glGetError()获取错误信息
+        return;
+    }
+    // 将着色器代码上传到创建好的着色器对象中
+    glShaderSource(shaderObjectId, shaderCode);
+    // 编译创建好的着色器对象
+    glCompileShader(shaderObjectId);
+    // 取出编译状态
+    final int[] compileStatus = new int[1];
+    // 取出shaderObjectId着色器对象的编译状态，并将结果写入compileStatus的第0个元素
+    glGetShaderiv(shaderObjectId, GL_COMPILE_STATUS, compileStatus, 0);
+    // 取出着色器编译信息日志
+    glGetShaderInfoLog(shaderObjectId);
+    // 验证着色器对象的编译状态并返回着色器对象ID
+    if(compileStatus[0] == 0){
+        // 编译失败
+        glDeleteShader(shaderObjectId);
+        return 0;
+    }
+    // 编译成功返回着色器对象编号ID
+    return shaderObjectId;
+}
+
+GL_VERTEX_SHADER
+GL_FRAGMENT_SHADER
+
+将着色器链接进opengl程序program
+opengl程序
+一个opengl程序就是把一个顶点着色器和一个片元着色器链接在一起变成单个对象
+顶点着色器与片着色器总是在一起工作的，不能单独存在，但也并不是必须要一对一配对
+// shader链接到program
+public static int linkProgram(int vertexShaderId, int fragemtnShaderId){
+    // 创建opengl program
+    final int programObjectId = glCreateProgram();
+    // 判断是否创建成功
+    if(programObjectId == 0){
+        return 0;
+    }
+    // 绑定着色器Id到opengl program
+    glAttachShader(programObjectId, vertexShaderId);
+    glAttachShader(programObjectId, fragmentShaderId);
+    // 链接程序
+    glLinkProgram(programObjectId);
+    // 获取链接结果
+    final int[] linkStatus = new int[1];
+    glGetProgramiv(programObjectId, GL_LINK_STATUS, linkStatu, 0);
+    // 验证链接状态
+    if(linkStatus[0] == 0){
+        glDeleteProgram(programObjectId);
+        return 0;
+    }
+    // 返回opengl程序ID
+    return programObjectId;
+}
+
+
+
+
 
 第五章 Martix
 单位矩阵：
