@@ -224,6 +224,50 @@ glDrawArrays(GL_POINTS, 8, 1);
 glUniform4f(u_ColorLocation, 1.0f, 0f, 0f, 1.0f)
 glDrawArrays(GL_POINTS, 9, 1);
 
+第四章 颜色和着色 varying STRIDE跨距
+GL_TRIANGLES    三角形
+GL_TRIANGLE_FAN 三角扇形
+
+使用android的Color类转换颜色
+opengl中只能识别 0到1的颜色分量值
+所以
+float red = Color.red(Color.RED) / 255f;
+float blue = Color.red(Color.BLUE) / 255f;
+float green = Color.red(Color.GREEN) / 255f;
+
+从fragment shader中去掉uniform定义的颜色，用另外一个属性替换它
+为vertex shader增加
+attribute vec4 a_Color
+
+varying vec4 v_Color;
+
+void main()
+{
+    v_Color = a_Color;
+}
+varying是一种特殊的变量类型，它把给他的那些值进行混合，并且把这些混合后的值发送给fragment shader
+比如顶点0的a_Color是红色，顶点1的a_Color是绿色
+那么混合后的结果就是，距离顶点0越近的点越红，距离顶点1越近的点越绿，中间颜色过度
+
+fragment shader去掉uniform， 增加
+varying vec4 v_Color;
+void main()
+{
+    gl_FragColor = v_Color;
+}
+
+varying可以混合任何值，这种混合是使用线性插值实现的(每种颜色的变化随着所在位置距离两端的距离比)
+blended_value = (vertex_0_value) * (100% - distance_ratio) + (vertex_1_value * distance_ratio)
+
+三角形颜色过度线性插值
+对于三角形内的任意给定点，从那个点向每个顶点画一条直线就可以生成3个内部三角形
+这三个内部三角形的面积比例决定了那个点上眉中颜色的权重
+blended_value = (vertex_0_value * vertex_0_weight) +
+                (vertex_1_value * vertex_1_weight) +
+                (vertex_2_value * (100% - vertex_0_weight - vertex_1_weight))
+
+STRIDE分量的意义:如果在同一个数据数组中，既有位置又有颜色，opengl不能再假定每一个分量的下一个位置还是一个同样意义的分量
+                 所以需要跳过颜色分量，opengl需要知道每个分量之间的"跨距"才能知道每个位置分量之间要跳过多少个字节
 
 第五章 Martix
 单位矩阵：

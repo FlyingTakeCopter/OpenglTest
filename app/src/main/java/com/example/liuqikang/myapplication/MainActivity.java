@@ -20,8 +20,9 @@ public class MainActivity extends AppCompatActivity {
         // 第二章
         // 第三章
 //        view.setRenderer(new AirHockeyRenderer(this));
-        view.setRenderer(new TestRender(this));
+//        view.setRenderer(new TestRender(this));
         // 第四章
+        view.setRenderer(new AirHockeyRenderer_4(this));
 //        view.setRenderer(new TestColorRender(this));
         // 第五章
 //        view.setRenderer(new TestMatrixRender(this));
