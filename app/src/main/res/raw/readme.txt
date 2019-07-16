@@ -282,9 +282,9 @@ STRIDE分量的意义:如果在同一个数据数组中，既有位置又有颜�
 0   0   0   1       4       0*1 + 0*2 + 0*3 + 1*4       4
 
 平移矩阵
-1   0   0   x
-0   1   0   y
-0   0   1   z
+1   0   0   X_translation
+0   1   0   Y_translation
+0   0   1   Z_translation
 0   0   0   1
 (2,2) X平移3，Y平移3
 1   0   0   3       2       1*2 + 0*2 + 0*0 + 3*1       5
@@ -313,6 +313,14 @@ opengl使用右手坐标    远处z为负，近处z为正
 gl_Position = u_Matrix * a_Postion
 顶点数组a_Position不必被翻译为归一化设备坐标，而是理解为存在这个矩阵所定义的虚拟空间坐标中
 这个矩阵会把坐标从虚拟坐标空间变换回归一化设备坐标
+
+创建正交投影
+final float aspectRatio = width > height ? (float)width / (float)height : (float)height/ (float)width
+if(width > height){
+    Matrix.orthoM(projectionMatrix, 0, -aspectRation, aspecRation, -1f, 1f, -1f, 1f);
+}else{
+    Matrix.orthoM(projectionMatrix, 0, -1f, 1f, -aspectRation, aspecRation,-1f, 1f);
+}
 
 第六章 3D
 6.1 从着色器到屏幕坐标的变换：
