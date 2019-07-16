@@ -1,6 +1,11 @@
 package com.example.liuqikang.myapplication;
 
+import android.content.Context;
+import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
+
+import com.example.liuqikang.myapplication.util.ShaderHelper;
+import com.example.liuqikang.myapplication.util.TextResourceReader;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -9,6 +14,9 @@ import java.nio.FloatBuffer;
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
+import static android.opengl.GLES20.*;
+import static android.opengl.GLUtils.*;
+import static android.opengl.Matrix.*;
 /**
  * Created by liuqikang on 2019/7/9.
  */
@@ -19,8 +27,20 @@ public class AirHockeyRenderer implements GLSurfaceView.Renderer {
     private static final int BYTES_PER_FLOAT = 4;
     private final FloatBuffer vertexData;
 
-    public AirHockeyRenderer(){
+    private Context mContext;
+
+    private int program;
+
+    private static final String A_POSITION = "a_Position";
+    private int a_position;
+
+    private static final String U_COLOR = "u_Color";
+    private int u_color;
+
+    public AirHockeyRenderer(Context context){
+        mContext = context;
         float[] tableVertices = {
+                // 桌面
                 0f, 0f,
                 9f, 14f,
                 0f, 14f,
@@ -28,10 +48,10 @@ public class AirHockeyRenderer implements GLSurfaceView.Renderer {
                 0f, 0f,
                 9f, 0f,
                 9f, 14f,
-
+                // 横线
                 0f, 7f,
                 9f, 7f,
-
+                // 木锥
                 4.5f, 2f,
                 4.5f, 12f
         };
@@ -52,20 +72,50 @@ public class AirHockeyRenderer implements GLSurfaceView.Renderer {
                 .order(ByteOrder.nativeOrder())
                 .asFloatBuffer();
         vertexData.put(tableVertices);
+
     }
 
     @Override
     public void onSurfaceCreated(GL10 gl, EGLConfig config) {
+        // 设置清空屏幕用的颜色
+        glClearColor(0.0f, 0.0f, 0f, 0f);
+
+        program = ShaderHelper.buildProgram(
+                TextResourceReader.readTextFileFromResource(mContext, R.raw.simple_vertex_sharder),
+                TextResourceReader.readTextFileFromResource(mContext, R.raw.simple_fragment_sharder));
+
+        glUseProgram(program);
+
+        a_position = glGetAttribLocation(program, A_POSITION);
+        u_color = glGetUniformLocation(program, U_COLOR);
+
+        vertexData.position(0);
+        glVertexAttribPointer(a_position, POSITION_COMPONENT_COUNT, GL_FLOAT,
+                false, 0, vertexData);
+        glEnableVertexAttribArray(a_position);
 
     }
 
     @Override
     public void onSurfaceChanged(GL10 gl, int width, int height) {
-
+        glViewport(0,0,width,height);
     }
 
     @Override
     public void onDrawFrame(GL10 gl) {
+        glClear(GLES20.GL_COLOR_BUFFER_BIT);
 
+        glUniform4f(u_color, 1.0f, 1.0f, 1.0f, 1.0f);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+
+        // 绘制线
+        GLES20.glUniform4f(u_color, 1.0f, 0.0f, 0.0f, 1.0f);
+        GLES20.glDrawArrays(GLES20.GL_LINES, 6, 2);
+        // 绘制点
+        GLES20.glUniform4f(u_color, 0.0f, 0.0f, 1.0f, 1.0f);
+        GLES20.glDrawArrays(GLES20.GL_POINTS, 8, 1);
+
+        GLES20.glUniform4f(u_color, 1.0f, 0.0f, 0.0f, 1.0f);
+        GLES20.glDrawArrays(GLES20.GL_POINTS, 9, 1);
     }
 }

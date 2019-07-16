@@ -15,10 +15,12 @@ public class MainActivity extends AppCompatActivity {
         // request opengles 2.0 compatible context
         view.setEGLContextClientVersion(2);
 
-        // Assign renderer
-        view.setRenderer(new FirstOpenglProjectRender());
+        // 第一章Assign renderer
+//        view.setRenderer(new FirstOpenglProjectRender());
+        // 第二章
         // 第三章
-//        view.setRenderer(new TestRender(this));
+//        view.setRenderer(new AirHockeyRenderer(this));
+        view.setRenderer(new TestRender(this));
         // 第四章
 //        view.setRenderer(new TestColorRender(this));
         // 第五章

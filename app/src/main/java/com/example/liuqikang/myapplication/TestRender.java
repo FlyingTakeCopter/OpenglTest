@@ -40,6 +40,14 @@ public class TestRender implements GLSurfaceView.Renderer {
     TestRender(Context cxt){
         this.mContext = cxt;
         float[] tableVerticesWithTriangles = {
+                -0.55f, -0.55f,
+                0.55f, 0.55f,
+                -0.55f, 0.55f,
+
+                -0.55f, -0.55f,
+                0.55f, -0.55f,
+                0.55f, 0.55f,
+
                 -0.5f, -0.5f,
                 0.5f, 0.5f,
                 -0.5f, 0.5f,
@@ -99,19 +107,22 @@ public class TestRender implements GLSurfaceView.Renderer {
     public void onDrawFrame(GL10 gl) {
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
 
+        GLES20.glUniform4f(uColorLocation, 0.5f, 0.5f, 0.5f, 1.0f);
+        GLES20.glDrawArrays(GLES20.GL_TRIANGLES, 0, 6);
+
         // 颜色更新uniform的值
         GLES20.glUniform4f(uColorLocation, 1.0f, 1.0f, 1.0f, 1.0f);
         // 绘制类型，开始顶点，读取个数
-        GLES20.glDrawArrays(GLES20.GL_TRIANGLES, 0 , 6);    // 前六个顶点绘制三角形
+        GLES20.glDrawArrays(GLES20.GL_TRIANGLES, 6 , 6);    // 前六个顶点绘制三角形
 
         // 绘制线
         GLES20.glUniform4f(uColorLocation, 1.0f, 0.0f, 0.0f, 1.0f);
-        GLES20.glDrawArrays(GLES20.GL_LINES, 6, 2);
+        GLES20.glDrawArrays(GLES20.GL_LINES, 12, 2);
         // 绘制点
-        GLES20.glUniform4f(uColorLocation, 0.0f, 0.0f, 1.0f, 1.0f);
-        GLES20.glDrawArrays(GLES20.GL_POINTS, 8, 1);
+        GLES20.glUniform4f(uColorLocation, 0.0f, 1.0f, 0.0f, 1.0f);
+        GLES20.glDrawArrays(GLES20.GL_POINTS, 14, 1);
 
-        GLES20.glUniform4f(uColorLocation, 1.0f, 0.0f, 0.0f, 1.0f);
-        GLES20.glDrawArrays(GLES20.GL_POINTS, 9, 1);
+        GLES20.glUniform4f(uColorLocation, 0.0f, 0.0f, 1.0f, 1.0f);
+        GLES20.glDrawArrays(GLES20.GL_POINTS, 15, 1);
     }
 }

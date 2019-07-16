@@ -30,12 +30,12 @@ Java有一个特殊的类集合(FloatBuffer)，他们可以分配本地的内存
 本地内存可以被本地环境读取，而不受垃圾回收器的管控
 
 FloatBuffer vertexData = ByteBuffer
-                .allocateDirect(tableVertices.length * BYTES_PER_FLOAT)
-                .order(ByteOrder.nativeOrder())
-                .asFloatBuffer();
+                .allocateDirect(tableVertices.length * BYTES_PER_FLOAT) 分配一块本地内存，非虚拟机内存，不会被虚拟机管理
+                .order(ByteOrder.nativeOrder())                         设置字节序按照本地字节序，保证同一个平台下的字节序一样
+                .asFloatBuffer();                                       作为浮点数使用
         vertexData.put(tableVertices);
 
-FloatBuffer用来在本地内存中存储数据，而不是在虚拟机汇总
+FloatBuffer用来在本地内存中存储数据，而不是在虚拟机中
 本地存储是为了方便本地系统库中的opengl进行访问
 allocateDirect分配一块本地内存，这块内存不受虚拟机管控，不会被垃圾回收
 order 告诉字节缓冲区(byte buffer)按照本地字节序(nativeOrder)组织它的内容
@@ -61,8 +61,13 @@ asFloatBuffer() 我们不愿直接操作单独的字节，而是希望使用浮�
 然后，android会把这个帧缓冲区显示到屏幕上
 
 opengl管道描述
-读取顶点数据-》执行顶点着色器-》组装图元-》光栅化图元-》
-执行片段着色器-》写入帧缓冲区-》显示在屏幕上
+读取顶点数据
+-》执行顶点着色器   (vertex shader)
+-》组装图元
+-》光栅化图元
+-》执行片段着色器   (fragment shader)
+-》写入帧缓冲区
+-》显示在屏幕上
 
 最简单的顶点着色器
 每一个定义过得单一顶点，顶点着色器都会被调用一次
@@ -169,8 +174,55 @@ public static int linkProgram(int vertexShaderId, int fragemtnShaderId){
     return programObjectId;
 }
 
+// 在GlSurfaceView.onSurfaceCreated中
+// 绑定opengl program 告诉Opengl在绘制任何东西到屏幕上都要使用这个opengl program
+glUseProgram(programID)
+// 绑定uniform
+private static final String U_COLOR = "u_color";
+private int uColorLocation;
+uColorLocation = glGetUniformLocation(programID, U_COLOR);
+// 绑定attribute
+private static final String A_POSITION = "a_position";
+private int aPositionLocation;
+aPositionLocation = glGetAttribLocation(programID, A_POSITION);
 
+// 关联attribute与顶点数据的数组
+// FloatBuffer 本地内存块中存储的顶点信息
+vertexData.position(0);// 保证从头读取
+glVertexAttribPointer(aPositionLocation, POSITION_COMPONENT_COUNT, GL_FLOAT, false, 0, vertexData);
+// 启用attribute
+glEnableVertexAttribArray(aPositionLocation)
 
+glVertexAttribPointer(int index, int size, int type, boolean normalized, int stride, Buffer ptr)
+int index:属性ID
+int size:标识每个属性数据的计数，代表多少个分量标识一个顶点信息 如果一个坐标用(x,y)表示这个值设置为2，(x,y,z)设置为3
+         注意，在vertex shader中我们定义顶点a_Position为vec4，在着色器中他有4个分量，
+         但实际上我们只传进去了两个有效值(x,y)，如果分量没有被指定值，默认情况下，opengl会把前三个分量设置为0，最后一个设置为1
+int type:标识分量的数据类型
+boolean normalized:只有使用整形数据的时候，这个参数才有意义
+int stride:只有当一个数组存储多于一个属性时，他才有意义
+Buffer ptr:告诉opengl去哪里读取数据，
+           如果我们没有调用vertexData.position(0)，它可能尝试读取缓冲区结尾后面的内容，并使我们的应用程序崩溃
+
+在onDrawFrame中
+// 绘制桌子
+// 更新fragment shader中的u_color值
+// 注意uniform分量没有默认值，如果定位为vec4，需要提供4个值，否则会崩溃
+glUniform4f(uColorLocation, 1.0f, 1.0f, 1.0f, 1.0f)
+// 第一个参数告诉opengl绘制三角形
+// 第二个参数告诉opengl从顶点数组的开头处开始读顶点
+// 第三个参数告诉opengl读入6个顶点
+glDrawArrays(GL_TRIANGLES, 0, 6);
+
+// 绘制分割线
+glUniform4f(u_ColorLocation, 1.0f, 0f, 0f, 1.0f)
+glDrawArrays(GL_LINES, 6, 2);
+
+// 绘制木锥
+glUniform4f(u_ColorLocation, 0f, 0f, 1.0f, 1.0f);
+glDrawArrays(GL_POINTS, 8, 1);
+glUniform4f(u_ColorLocation, 1.0f, 0f, 0f, 1.0f)
+glDrawArrays(GL_POINTS, 9, 1);
 
 
 第五章 Martix
