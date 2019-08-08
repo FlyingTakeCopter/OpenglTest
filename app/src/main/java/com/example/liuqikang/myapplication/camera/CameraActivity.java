@@ -3,6 +3,7 @@ package com.example.liuqikang.myapplication.camera;
 import android.animation.ObjectAnimator;
 import android.animation.PropertyValuesHolder;
 import android.app.Activity;
+import android.content.Context;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
 import android.opengl.GLES20;
@@ -39,7 +40,7 @@ import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
 
-public class CameraActivity extends Activity implements SurfaceHolder.Callback,
+public class CameraActivity extends Activity implements
         SurfaceTexture.OnFrameAvailableListener, View.OnClickListener {
     private static final String TAG = CameraActivity.class.getName();
 
@@ -47,15 +48,13 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback,
     private static final int VIDEO_HEIGHT = 1080;
     private static int DESIRED_PREVIEW_FPS = 15;
 
-    private EglCore eglCore;
-    private WindowSurface displaySurface;
-    private SurfaceTexture cameraTexture;  // receives the output from the camera preview
     private FullFrameRect fullFrameBlit;
+    private SurfaceTexture cameraTexture;  // receives the output from the camera preview
     private int mTextureId;
     private int mCameraPreviewThousandFps;
 
     private CameraHandler mHandler;
-    SurfaceView surfaceView;
+    CameraSurfaceView cameraSurfaceView;
     private Camera camera;
 
     private TextView fpsText;
@@ -119,9 +118,25 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback,
         frameTranslation.setOnClickListener(this);
         frameAlpha.setOnClickListener(this);
 
-        surfaceView = (SurfaceView) findViewById(R.id.camera_surfaceview);
-        SurfaceHolder holder = surfaceView.getHolder();
-        holder.addCallback(this);
+        cameraSurfaceView = (CameraSurfaceView) findViewById(R.id.camera_surfaceview);
+        cameraSurfaceView.init(new CameraSurfaceView.surfaceCreateListener() {
+            @Override
+            public void surCreated(int textureID) {
+                // 初始化OpenglEs环境
+                fullFrameBlit = new FullFrameRect(new Texture2dProgram(Texture2dProgram.ProgramType.TEXTURE_EXT));
+                // 获取GLES的TextureID
+                mTextureId = fullFrameBlit.createTextureObject();
+                // 初始化 绑定SurfaceTexture
+                cameraTexture = new SurfaceTexture(mTextureId);
+                cameraTexture.setOnFrameAvailableListener(getActivity());
+                startPreview();
+            }
+
+            @Override
+            public void onCurrentFps(int fps) {
+                fpsText.setText("FPS: " + fps);
+            }
+        });
 
         mHandler = new CameraHandler(this);
 
@@ -139,6 +154,13 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback,
                 objectAnimator.setDuration(5000).start();
             }
         });
+
+
+
+    }
+
+    private CameraActivity getActivity(){
+        return this;
     }
 
     @Override
@@ -152,7 +174,7 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback,
                 // the video encoder so we don't have to scale.
                 openCamera(VIDEO_WIDTH, VIDEO_HEIGHT, DESIRED_PREVIEW_FPS);
             }
-            if (eglCore != null) {
+            if (!cameraSurfaceView.isEglNull()) {
                 startPreview();
             }
         }
@@ -164,41 +186,16 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback,
 
         releaseCamera();
 
+        if (fullFrameBlit != null){
+            fullFrameBlit.release(false);
+            fullFrameBlit = null;
+        }
+
         if (cameraTexture != null) {
             cameraTexture.release();
             cameraTexture = null;
         }
-        if (displaySurface != null) {
-            displaySurface.release();
-            displaySurface = null;
-        }
-        if (fullFrameBlit != null) {
-            fullFrameBlit.release(false);
-            fullFrameBlit = null;
-        }
-        if (eglCore != null) {
-            eglCore.release();
-            eglCore = null;
-        }
-    }
-
-    @Override
-    public void surfaceCreated(SurfaceHolder holder) {
-        // 创建EGL
-        eglCore = new EglCore(null, EglCore.FLAG_RECORDABLE);
-        // 创建 EGL window 绑定要绘制的surface
-        displaySurface = new WindowSurface(eglCore, holder.getSurface(), false);
-        displaySurface.makeCurrent();
-
-        // 初始化OpenglEs环境
-        fullFrameBlit = new FullFrameRect(new Texture2dProgram(Texture2dProgram.ProgramType.TEXTURE_EXT));
-        // 获取GLES的TextureID
-        mTextureId = fullFrameBlit.createTextureObject();
-        // 初始化 绑定SurfaceTexture
-        cameraTexture = new SurfaceTexture(mTextureId);
-        cameraTexture.setOnFrameAvailableListener(this);
-
-        startPreview();
+        cameraSurfaceView.onPause();
     }
 
     private void startPreview(){
@@ -210,7 +207,7 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback,
             }
             camera.startPreview();
         }
-        
+
     }
 
     private void openCamera(int desiredWidth, int desiredHeight, int desiredFps) {
@@ -280,7 +277,10 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback,
 
         List<Integer> fpsList = new ArrayList<>();
         for (int[] entry : supported) {
-            fpsList.add(entry[1] / 1000);
+            Log.e(TAG, "fps: " + entry[0] + " " + entry[1]);
+            if(!fpsList.contains(entry[1] / 1000)) {
+                fpsList.add(entry[1] / 1000);
+            }
         }
         ArrayAdapter<Integer> adapter = new ArrayAdapter<Integer>(this,
                 android.R.layout.simple_list_item_1, fpsList);
@@ -304,52 +304,6 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback,
     }
 
     @Override
-    public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-
-    }
-
-    @Override
-    public void surfaceDestroyed(SurfaceHolder holder) {
-
-    }
-
-    private final float[] mTmpMatrix = new float[16];
-
-    long baseTime = -1;
-    int drawNum = 0;
-
-    private void drawFrame(){
-        if (eglCore == null){
-            return;
-        }
-
-        drawNum++;
-        if (baseTime == -1){
-            baseTime = System.nanoTime();
-        }
-
-        if (System.nanoTime() - baseTime >= 1000000000){
-            baseTime = System.nanoTime();
-            final int num = drawNum;
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    fpsText.setText("Draw FPS: " + num);
-                }
-            });
-            drawNum = 0;
-        }
-
-        displaySurface.makeCurrent();
-        cameraTexture.updateTexImage();
-        cameraTexture.getTransformMatrix(mTmpMatrix);
-
-        GLES20.glViewport(0, 0, surfaceView.getWidth(), surfaceView.getHeight());
-        fullFrameBlit.drawFrame(mTextureId, mTmpMatrix);
-        displaySurface.swapBuffers();
-    }
-
-    @Override
     public void onFrameAvailable(SurfaceTexture surfaceTexture) {
         // 激活绘制
         mHandler.sendEmptyMessage(CameraHandler.MSG_FRAME_AVAILABLE);
@@ -367,8 +321,8 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback,
                 canSurfaceMove = !canSurfaceMove;
                 surfaceMove.setText("surface移动:" + (canSurfaceMove ? "开" : "复位"));
                 if (!canSurfaceMove){
-                    surfaceView.setX(0);
-                    surfaceView.setY(0);
+                    cameraSurfaceView.setX(0);
+                    cameraSurfaceView.setY(0);
                 }
                 break;
             case R.id.camera_framelayout_move:
@@ -443,7 +397,10 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback,
 
             switch (msg.what){
                 case MSG_FRAME_AVAILABLE:
-                    activit.drawFrame();
+                    if (activit.getCameraSurfaceView() != null){
+                        activit.getCameraSurfaceView().drawFrame(
+                                activit.getCameraTexture(), activit.getmTextureId());
+                    }
                     break;
                 default:
                     break;
@@ -473,12 +430,12 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback,
     public boolean onTouchEvent(MotionEvent event) {
         if (canSurfaceMove){
             if (event.getAction() == MotionEvent.ACTION_DOWN){
-                surfaceTouchX = event.getX() - surfaceView.getX();
-                surfaceTouchY = event.getY() - surfaceView.getY();
+                surfaceTouchX = event.getX() - cameraSurfaceView.getX();
+                surfaceTouchY = event.getY() - cameraSurfaceView.getY();
             }
 
-            surfaceView.setX(event.getX() - surfaceTouchX);
-            surfaceView.setY(event.getY() - surfaceTouchY);
+            cameraSurfaceView.setX(event.getX() - surfaceTouchX);
+            cameraSurfaceView.setY(event.getY() - surfaceTouchY);
         }
 
         if (canFrameMove){
@@ -492,5 +449,19 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback,
         }
 
         return super.onTouchEvent(event);
+    }
+
+
+    public CameraSurfaceView getCameraSurfaceView() {
+        return cameraSurfaceView;
+    }
+
+
+    public SurfaceTexture getCameraTexture() {
+        return cameraTexture;
+    }
+
+    public int getmTextureId() {
+        return mTextureId;
     }
 }
