@@ -71,8 +71,16 @@
         android:layout_alignParentRight="true"/>
 
     <Button
-        android:id="@+id/camera_btn"
+        android:id="@+id/camera_framelayout_translation"
         android:layout_below="@+id/camera_framelayout_scale"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Y偏移100"
+        android:layout_alignParentRight="true"/>
+
+    <Button
+        android:id="@+id/camera_btn"
+        android:layout_below="@+id/camera_framelayout_translation"
         android:layout_width="wrap_content"
         android:layout_height="50dp"
         android:layout_centerInParent="true"

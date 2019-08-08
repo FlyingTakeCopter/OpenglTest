@@ -67,6 +67,7 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback,
     private Button surfaceMove;
     private Button frameRotation;
     private Button frameScale;
+    private Button frameTranslation;
 
     boolean canSurfaceMove = false;
     boolean canFrameMove = false;
@@ -108,10 +109,12 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback,
         surfaceMove = (Button) findViewById(R.id.camera_surfaceView_move);
         frameRotation = (Button)findViewById(R.id.camera_framelayout_rotation);
         frameScale = (Button) findViewById(R.id.camera_framelayout_scale);
+        frameTranslation = (Button) findViewById(R.id.camera_framelayout_translation);
         frameMove.setOnClickListener(this);
         surfaceMove.setOnClickListener(this);
         frameRotation.setOnClickListener(this);
         frameScale.setOnClickListener(this);
+        frameTranslation.setOnClickListener(this);
 
         surfaceView = (SurfaceView) findViewById(R.id.camera_surfaceview);
         SurfaceHolder holder = surfaceView.getHolder();
@@ -346,7 +349,9 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback,
     }
 
     int rotation = 90;
-    float scale = 0;
+    float scale = 0.5f;
+    float translation = 100;
+
     @Override
     public void onClick(View v) {
         switch (v.getId()){
@@ -385,6 +390,16 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback,
                 }else {
                     scale = 0.5f;
                     frameScale.setText("缩放0.5");
+                }
+                break;
+            case R.id.camera_framelayout_translation:
+                frameLayout.setTranslationY(translation);
+                if (translation == 100f){
+                    translation = 0f;
+                    frameTranslation.setText("偏移复位");
+                }else {
+                    translation = 100f;
+                    frameTranslation.setText("Y偏移100");
                 }
                 break;
         }
