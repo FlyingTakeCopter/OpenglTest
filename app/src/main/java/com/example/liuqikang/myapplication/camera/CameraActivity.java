@@ -68,6 +68,7 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback,
     private Button frameRotation;
     private Button frameScale;
     private Button frameTranslation;
+    private Button frameAlpha;
 
     boolean canSurfaceMove = false;
     boolean canFrameMove = false;
@@ -110,11 +111,13 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback,
         frameRotation = (Button)findViewById(R.id.camera_framelayout_rotation);
         frameScale = (Button) findViewById(R.id.camera_framelayout_scale);
         frameTranslation = (Button) findViewById(R.id.camera_framelayout_translation);
+        frameAlpha = (Button) findViewById(R.id.camera_framelayout_alpha);
         frameMove.setOnClickListener(this);
         surfaceMove.setOnClickListener(this);
         frameRotation.setOnClickListener(this);
         frameScale.setOnClickListener(this);
         frameTranslation.setOnClickListener(this);
+        frameAlpha.setOnClickListener(this);
 
         surfaceView = (SurfaceView) findViewById(R.id.camera_surfaceview);
         SurfaceHolder holder = surfaceView.getHolder();
@@ -351,6 +354,7 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback,
     int rotation = 90;
     float scale = 0.5f;
     float translation = 100;
+    float alpha = 0.5f;
 
     @Override
     public void onClick(View v) {
@@ -400,6 +404,16 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback,
                 }else {
                     translation = 100f;
                     frameTranslation.setText("Y偏移100");
+                }
+                break;
+            case R.id.camera_framelayout_alpha:
+                frameLayout.setAlpha(alpha);
+                if (alpha == 0.5f){
+                    alpha = 1.0f;
+                    frameAlpha.setText("复位");
+                }else {
+                    alpha = 0.5f;
+                    frameAlpha.setText("透明50");
                 }
                 break;
         }
