@@ -3,29 +3,98 @@ package com.example.liuqikang.myapplication.camera;
 import android.animation.ObjectAnimator;
 import android.animation.PropertyValuesHolder;
 import android.app.Activity;
-import android.graphics.PixelFormat;
+import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
+import android.opengl.GLES20;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
+import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.util.Log;
+import android.view.Display;
+import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
-import android.widget.Button;
+import android.view.WindowManager;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.Spinner;
+import android.widget.TextView;
+import android.widget.Toast;
 
 import com.example.liuqikang.myapplication.R;
+import com.example.liuqikang.myapplication.gles.EglCore;
+import com.example.liuqikang.myapplication.gles.FullFrameRect;
+import com.example.liuqikang.myapplication.gles.Texture2dProgram;
+import com.example.liuqikang.myapplication.gles.WindowSurface;
+import com.example.liuqikang.myapplication.util.PermissionHelper;
 
-public class CameraActivity extends Activity implements SurfaceHolder.Callback {
+import java.io.IOException;
+import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+import java.util.List;
+
+public class CameraActivity extends Activity implements SurfaceHolder.Callback,
+        SurfaceTexture.OnFrameAvailableListener {
+    private static final String TAG = CameraActivity.class.getName();
+
+    private static final int VIDEO_WIDTH = 1920;
+    private static final int VIDEO_HEIGHT = 1080;
+    private static int DESIRED_PREVIEW_FPS = 15;
+
+    private EglCore eglCore;
+    private WindowSurface displaySurface;
+    private SurfaceTexture cameraTexture;  // receives the output from the camera preview
+    private FullFrameRect fullFrameBlit;
+    private int mTextureId;
+    private int mCameraPreviewThousandFps;
+
+    private CameraHandler mHandler;
     SurfaceView surfaceView;
     private Camera camera;
+
+    private TextView fpsText;
+    private Spinner fpsSpinner;
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_camera);
 
+        fpsText = (TextView) findViewById(R.id.camera_text);
+        fpsSpinner = (Spinner) findViewById(R.id.spinner_simple);
+        fpsSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                if (camera != null){
+                    Camera.Parameters parms = camera.getParameters();
+
+                    DESIRED_PREVIEW_FPS = Integer.parseInt(parent.getItemAtPosition(position).toString());
+
+                    mCameraPreviewThousandFps = CameraUtils.chooseFixedPreviewFps(parms, DESIRED_PREVIEW_FPS * 1000);
+
+                    // Give the camera a hint that we're recording video.  This can have a big
+                    // impact on frame rate.
+                    parms.setRecordingHint(true);
+
+                    camera.setParameters(parms);
+                }
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+
+            }
+        });
+
         surfaceView = (SurfaceView) findViewById(R.id.camera_surfaceview);
         SurfaceHolder holder = surfaceView.getHolder();
         holder.addCallback(this);
-        holder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
+
+        mHandler = new CameraHandler(this);
 
         findViewById(R.id.camera_btn).setOnClickListener(new View.OnClickListener() {
             @Override
@@ -40,40 +109,257 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback {
     }
 
     @Override
-    public void surfaceCreated(SurfaceHolder holder) {
-        try{
-            camera = Camera.open(0);
-            camera.setDisplayOrientation(90);
-            camera.setPreviewDisplay(holder);
-            camera.startPreview();
-        }catch (Exception e){
+    protected void onResume() {
+        super.onResume();
+        if (!PermissionHelper.hasCameraPermission(this)) {
+            PermissionHelper.requestCameraPermission(this, false);
+        } else  {
+            if (camera == null) {
+                // Ideally, the frames from the camera are at the same resolution as the input to
+                // the video encoder so we don't have to scale.
+                openCamera(VIDEO_WIDTH, VIDEO_HEIGHT, DESIRED_PREVIEW_FPS);
+            }
+            if (eglCore != null) {
+                startPreview();
+            }
+        }
+    }
 
+    @Override
+    protected void onPause() {
+        super.onPause();
+
+        releaseCamera();
+
+        if (cameraTexture != null) {
+            cameraTexture.release();
+            cameraTexture = null;
+        }
+        if (displaySurface != null) {
+            displaySurface.release();
+            displaySurface = null;
+        }
+        if (fullFrameBlit != null) {
+            fullFrameBlit.release(false);
+            fullFrameBlit = null;
+        }
+        if (eglCore != null) {
+            eglCore.release();
+            eglCore = null;
+        }
+    }
+
+    @Override
+    public void surfaceCreated(SurfaceHolder holder) {
+        // 创建EGL
+        eglCore = new EglCore(null, EglCore.FLAG_RECORDABLE);
+        // 创建 EGL window 绑定要绘制的surface
+        displaySurface = new WindowSurface(eglCore, holder.getSurface(), false);
+        displaySurface.makeCurrent();
+
+        // 初始化OpenglEs环境
+        fullFrameBlit = new FullFrameRect(new Texture2dProgram(Texture2dProgram.ProgramType.TEXTURE_EXT));
+        // 获取GLES的TextureID
+        mTextureId = fullFrameBlit.createTextureObject();
+        // 初始化 绑定SurfaceTexture
+        cameraTexture = new SurfaceTexture(mTextureId);
+        cameraTexture.setOnFrameAvailableListener(this);
+
+        startPreview();
+    }
+
+    private void startPreview(){
+        if (camera != null){
+            try{
+                camera.setPreviewTexture(cameraTexture);
+            }catch (IOException e){
+                throw new RuntimeException(e);
+            }
+            camera.startPreview();
+        }
+        
+    }
+
+    private void openCamera(int desiredWidth, int desiredHeight, int desiredFps) {
+        if (camera != null) {
+            throw new RuntimeException("camera already initialized");
+        }
+
+        Camera.CameraInfo info = new Camera.CameraInfo();
+
+        // Try to find a front-facing camera (e.g. for videoconferencing).
+        int nucameras = Camera.getNumberOfCameras();
+        for (int i = 0; i < nucameras; i++) {
+            Camera.getCameraInfo(i, info);
+            if (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+                camera = Camera.open(i);
+                break;
+            }
+        }
+        if (camera == null) {
+            Log.d(TAG, "No front-facing camera found; opening default");
+            camera = Camera.open();    // opens first back-facing camera
+        }
+        if (camera == null) {
+            throw new RuntimeException("Unable to open camera");
+        }
+
+        Camera.Parameters parms = camera.getParameters();
+
+        CameraUtils.choosePreviewSize(parms, desiredWidth, desiredHeight);
+
+        // Try to set the frame rate to a constant value.
+        mCameraPreviewThousandFps = CameraUtils.chooseFixedPreviewFps(parms, desiredFps * 1000);
+
+        pickCameraParams(parms);
+
+        // Give the camera a hint that we're recording video.  This can have a big
+        // impact on frame rate.
+        parms.setRecordingHint(true);
+
+        camera.setParameters(parms);
+
+        Camera.Size cameraPreviewSize = parms.getPreviewSize();
+        String previewFacts = cameraPreviewSize.width + "x" + cameraPreviewSize.height +
+                " @" + (mCameraPreviewThousandFps / 1000.0f) + "fps";
+        Log.i(TAG, "Camera config: " + previewFacts);
+
+//        AspectFrameLayout layout = (AspectFrameLayout) findViewById(R.id.continuousCapture_afl);
+
+        Display display = ((WindowManager)getSystemService(WINDOW_SERVICE)).getDefaultDisplay();
+
+        if(display.getRotation() == Surface.ROTATION_0) {
+            camera.setDisplayOrientation(90);
+//            layout.setAspectRatio((double) cameraPreviewSize.height / cameraPreviewSize.width);
+        } else if(display.getRotation() == Surface.ROTATION_270) {
+//            layout.setAspectRatio((double) cameraPreviewSize.height / cameraPreviewSize.width);
+            camera.setDisplayOrientation(180);
+        } else {
+            // Set the preview aspect ratio.
+//            layout.setAspectRatio((double) cameraPreviewSize.width / cameraPreviewSize.height);
+        }
+
+    }
+
+    private void pickCameraParams(Camera.Parameters parms){
+        // FPS 提取
+        List<int[]> supported = parms.getSupportedPreviewFpsRange();
+
+        List<Integer> fpsList = new ArrayList<>();
+        for (int[] entry : supported) {
+            fpsList.add(entry[1] / 1000);
+        }
+        ArrayAdapter<Integer> adapter = new ArrayAdapter<Integer>(this,
+                android.R.layout.simple_list_item_1, fpsList);
+
+        fpsSpinner.setAdapter(adapter);
+
+        // 白平衡
+
+    }
+
+    /**
+     * Stops camera preview, and releases the camera to the system.
+     */
+    private void releaseCamera() {
+        if (camera != null) {
+            camera.stopPreview();
+            camera.release();
+            camera = null;
+            Log.d(TAG, "releaseCamera -- done");
         }
     }
 
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-        camera.autoFocus(new Camera.AutoFocusCallback() {
-            @Override
-            public void onAutoFocus(boolean success, Camera camera) {
-                if (success){
-                    Camera.Parameters parameters = camera.getParameters();
-                    parameters.setPictureFormat(PixelFormat.JPEG);
-                    parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
-                    camera.setParameters(parameters);
-                    camera.startPreview();
-                    camera.cancelAutoFocus();
-                }
-            }
-        });
+
     }
 
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
-        if (camera != null){
-            camera.stopPreview();
-            camera.release();
-            camera = null;
+
+    }
+
+    private final float[] mTmpMatrix = new float[16];
+
+    long baseTime = -1;
+    int drawNum = 0;
+
+    private void drawFrame(){
+        if (eglCore == null){
+            return;
+        }
+
+        drawNum++;
+        if (baseTime == -1){
+            baseTime = System.nanoTime();
+        }
+
+        if (System.nanoTime() - baseTime >= 1000000000){
+            baseTime = System.nanoTime();
+            final int num = drawNum;
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    fpsText.setText("Draw FPS: " + num);
+                }
+            });
+            drawNum = 0;
+        }
+
+        displaySurface.makeCurrent();
+        cameraTexture.updateTexImage();
+        cameraTexture.getTransformMatrix(mTmpMatrix);
+
+        GLES20.glViewport(0, 0, surfaceView.getWidth(), surfaceView.getHeight());
+        fullFrameBlit.drawFrame(mTextureId, mTmpMatrix);
+        displaySurface.swapBuffers();
+    }
+
+    @Override
+    public void onFrameAvailable(SurfaceTexture surfaceTexture) {
+        // 激活绘制
+        mHandler.sendEmptyMessage(CameraHandler.MSG_FRAME_AVAILABLE);
+    }
+
+    private static class CameraHandler extends Handler{
+        // 刷新视频帧
+        public static final int MSG_FRAME_AVAILABLE = 0;
+
+        private WeakReference<CameraActivity> mWeakActivity;
+
+        public CameraHandler(CameraActivity activity){
+            mWeakActivity = new WeakReference<CameraActivity>(activity);
+        }
+
+        @Override
+        public void handleMessage(Message msg) {
+            CameraActivity activit = mWeakActivity.get();
+            if (activit == null){
+                Log.e(TAG, "handler activity null");
+                return;
+            }
+
+            switch (msg.what){
+                case MSG_FRAME_AVAILABLE:
+                    activit.drawFrame();
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (!PermissionHelper.hasCameraPermission(this)) {
+            Toast.makeText(this,
+                    "申请相机权限失败", Toast.LENGTH_LONG).show();
+            PermissionHelper.launchPermissionSettings(this);
+            finish();
+        } else {
+            openCamera(VIDEO_WIDTH, VIDEO_HEIGHT, DESIRED_PREVIEW_FPS);
         }
     }
 }

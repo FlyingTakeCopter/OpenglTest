@@ -19,7 +19,8 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.AppCompat.DayNight.NoActionBar">
+        android:screenOrientation="portrait"
+        android:theme="@style/NoTitleTranslucentTheme">
         <!--<activity android:name=".MainActivity">-->
         <activity android:name=".camera.CameraActivity">
             <intent-filter>
