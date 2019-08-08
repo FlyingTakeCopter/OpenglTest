@@ -4,17 +4,15 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <SurfaceView
-        android:id="@+id/camera_surfaceview"
+    <FrameLayout
+        android:id="@+id/camera_frame_layout"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
-
-    <Button
-        android:id="@+id/camera_btn"
-        android:layout_width="wrap_content"
-        android:layout_height="50dp"
-        android:layout_centerInParent="true"
-        android:text="动画"/>
+        android:layout_height="match_parent">
+        <SurfaceView
+            android:id="@+id/camera_surfaceview"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+    </FrameLayout>
 
     <TextView
         android:id="@+id/camera_text"
@@ -40,23 +38,44 @@
         android:layout_width="60dp"
         android:layout_height="30dp"
         android:background="@color/white"/>
-    <!--<Button-->
-        <!--android:layout_width="wrap_content"-->
-        <!--android:layout_height="wrap_content"-->
-        <!--android:text="15"/>-->
 
-    <!--<Button-->
-        <!--android:layout_width="wrap_content"-->
-        <!--android:layout_height="wrap_content"-->
-        <!--android:text="20"/>-->
+    <Button
+        android:id="@+id/camera_framelayout_move"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="frameLayout移动:关"
+        android:layout_alignParentRight="true"/>
 
-    <!--<Button-->
-        <!--android:layout_width="wrap_content"-->
-        <!--android:layout_height="wrap_content"-->
-        <!--android:text="24"/>-->
+    <Button
+        android:id="@+id/camera_surfaceView_move"
+        android:layout_below="@+id/camera_framelayout_move"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" 
+        android:text="surface移动:关"
+        android:layout_alignParentRight="true"/>
 
-    <!--<Button-->
-        <!--android:layout_width="wrap_content"-->
-        <!--android:layout_height="wrap_content"-->
-        <!--android:text="30"/>-->
+    <Button
+        android:id="@+id/camera_framelayout_rotation"
+        android:layout_below="@+id/camera_surfaceView_move"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="旋转90"
+        android:layout_alignParentRight="true"/>
+
+    <Button
+        android:id="@+id/camera_framelayout_scale"
+        android:layout_below="@+id/camera_framelayout_rotation"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="缩放0.5"
+        android:layout_alignParentRight="true"/>
+
+    <Button
+        android:id="@+id/camera_btn"
+        android:layout_below="@+id/camera_framelayout_scale"
+        android:layout_width="wrap_content"
+        android:layout_height="50dp"
+        android:layout_centerInParent="true"
+        android:text="动画"
+        android:layout_alignParentRight="true"/>
 </RelativeLayout>
