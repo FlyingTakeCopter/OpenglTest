@@ -3,23 +3,15 @@ package com.example.liuqikang.myapplication.camera;
 import android.animation.ObjectAnimator;
 import android.animation.PropertyValuesHolder;
 import android.app.Activity;
-import android.content.Context;
 import android.graphics.SurfaceTexture;
-import android.hardware.Camera;
-import android.opengl.GLES20;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.util.Log;
-import android.view.Display;
 import android.view.MotionEvent;
-import android.view.Surface;
-import android.view.SurfaceHolder;
-import android.view.SurfaceView;
 import android.view.View;
-import android.view.WindowManager;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -29,33 +21,24 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.liuqikang.myapplication.R;
-import com.example.liuqikang.myapplication.gles.EglCore;
-import com.example.liuqikang.myapplication.gles.FullFrameRect;
-import com.example.liuqikang.myapplication.gles.Texture2dProgram;
-import com.example.liuqikang.myapplication.gles.WindowSurface;
 import com.example.liuqikang.myapplication.util.PermissionHelper;
 
-import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
-import java.util.List;
 
-public class CameraActivity extends Activity implements
+public class CameraSurfaceViewActivity extends Activity implements
         SurfaceTexture.OnFrameAvailableListener, View.OnClickListener {
-    private static final String TAG = CameraActivity.class.getName();
+    private static final String TAG = CameraSurfaceViewActivity.class.getName();
 
     private static final int VIDEO_WIDTH = 1920;
     private static final int VIDEO_HEIGHT = 1080;
     private static int DESIRED_PREVIEW_FPS = 15;
 
-    private FullFrameRect fullFrameBlit;
     private SurfaceTexture cameraTexture;  // receives the output from the camera preview
     private int mTextureId;
-    private int mCameraPreviewThousandFps;
 
     private CameraHandler mHandler;
     CameraSurfaceView cameraSurfaceView;
-    private Camera camera;
 
     private TextView fpsText;
     private Spinner fpsSpinner;
@@ -68,6 +51,8 @@ public class CameraActivity extends Activity implements
     private Button frameScale;
     private Button frameTranslation;
     private Button frameAlpha;
+
+    private Button switchCamera;
 
     boolean canSurfaceMove = false;
     boolean canFrameMove = false;
@@ -83,19 +68,9 @@ public class CameraActivity extends Activity implements
 
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                if (camera != null){
-                    Camera.Parameters parms = camera.getParameters();
+                DESIRED_PREVIEW_FPS = Integer.parseInt(parent.getItemAtPosition(position).toString());
 
-                    DESIRED_PREVIEW_FPS = Integer.parseInt(parent.getItemAtPosition(position).toString());
-
-                    mCameraPreviewThousandFps = CameraUtils.chooseFixedPreviewFps(parms, DESIRED_PREVIEW_FPS * 1000);
-
-                    // Give the camera a hint that we're recording video.  This can have a big
-                    // impact on frame rate.
-                    parms.setRecordingHint(true);
-
-                    camera.setParameters(parms);
-                }
+                CameraController.setCameraFPS(DESIRED_PREVIEW_FPS);
             }
 
             @Override
@@ -111,25 +86,24 @@ public class CameraActivity extends Activity implements
         frameScale = (Button) findViewById(R.id.camera_framelayout_scale);
         frameTranslation = (Button) findViewById(R.id.camera_framelayout_translation);
         frameAlpha = (Button) findViewById(R.id.camera_framelayout_alpha);
+        switchCamera = (Button) findViewById(R.id.camera_switch);
         frameMove.setOnClickListener(this);
         surfaceMove.setOnClickListener(this);
         frameRotation.setOnClickListener(this);
         frameScale.setOnClickListener(this);
         frameTranslation.setOnClickListener(this);
         frameAlpha.setOnClickListener(this);
+        switchCamera.setOnClickListener(this);
 
         cameraSurfaceView = (CameraSurfaceView) findViewById(R.id.camera_surfaceview);
         cameraSurfaceView.init(new CameraSurfaceView.surfaceCreateListener() {
             @Override
             public void surCreated(int textureID) {
-                // 初始化OpenglEs环境
-                fullFrameBlit = new FullFrameRect(new Texture2dProgram(Texture2dProgram.ProgramType.TEXTURE_EXT));
-                // 获取GLES的TextureID
-                mTextureId = fullFrameBlit.createTextureObject();
+                mTextureId = textureID;
                 // 初始化 绑定SurfaceTexture
                 cameraTexture = new SurfaceTexture(mTextureId);
                 cameraTexture.setOnFrameAvailableListener(getActivity());
-                startPreview();
+                CameraController.startPreview(cameraTexture);
             }
 
             @Override
@@ -159,7 +133,7 @@ public class CameraActivity extends Activity implements
 
     }
 
-    private CameraActivity getActivity(){
+    private CameraSurfaceViewActivity getActivity(){
         return this;
     }
 
@@ -169,13 +143,22 @@ public class CameraActivity extends Activity implements
         if (!PermissionHelper.hasCameraPermission(this)) {
             PermissionHelper.requestCameraPermission(this, false);
         } else  {
-            if (camera == null) {
+            if (CameraController.canOpenCamera()) {
                 // Ideally, the frames from the camera are at the same resolution as the input to
                 // the video encoder so we don't have to scale.
-                openCamera(VIDEO_WIDTH, VIDEO_HEIGHT, DESIRED_PREVIEW_FPS);
+                CameraController.openCamera(this, VIDEO_WIDTH, VIDEO_HEIGHT, DESIRED_PREVIEW_FPS);
+                fpsSpinner.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        ArrayList<Integer> fpsList = CameraController.getCameraFps();
+                        ArrayAdapter<Integer> adapter = new ArrayAdapter<Integer>(getActivity(),
+                                android.R.layout.simple_list_item_1, fpsList);
+                        fpsSpinner.setAdapter(adapter);
+                    }
+                });
             }
             if (!cameraSurfaceView.isEglNull()) {
-                startPreview();
+                CameraController.startPreview(cameraTexture);
             }
         }
     }
@@ -184,12 +167,7 @@ public class CameraActivity extends Activity implements
     protected void onPause() {
         super.onPause();
 
-        releaseCamera();
-
-        if (fullFrameBlit != null){
-            fullFrameBlit.release(false);
-            fullFrameBlit = null;
-        }
+        CameraController.releaseCamera();
 
         if (cameraTexture != null) {
             cameraTexture.release();
@@ -198,110 +176,6 @@ public class CameraActivity extends Activity implements
         cameraSurfaceView.onPause();
     }
 
-    private void startPreview(){
-        if (camera != null){
-            try{
-                camera.setPreviewTexture(cameraTexture);
-            }catch (IOException e){
-                throw new RuntimeException(e);
-            }
-            camera.startPreview();
-        }
-
-    }
-
-    private void openCamera(int desiredWidth, int desiredHeight, int desiredFps) {
-        if (camera != null) {
-            throw new RuntimeException("camera already initialized");
-        }
-
-        Camera.CameraInfo info = new Camera.CameraInfo();
-
-        // Try to find a front-facing camera (e.g. for videoconferencing).
-        int nucameras = Camera.getNumberOfCameras();
-        for (int i = 0; i < nucameras; i++) {
-            Camera.getCameraInfo(i, info);
-            if (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
-                camera = Camera.open(i);
-                break;
-            }
-        }
-        if (camera == null) {
-            Log.d(TAG, "No front-facing camera found; opening default");
-            camera = Camera.open();    // opens first back-facing camera
-        }
-        if (camera == null) {
-            throw new RuntimeException("Unable to open camera");
-        }
-
-        Camera.Parameters parms = camera.getParameters();
-
-        CameraUtils.choosePreviewSize(parms, desiredWidth, desiredHeight);
-
-        // Try to set the frame rate to a constant value.
-        mCameraPreviewThousandFps = CameraUtils.chooseFixedPreviewFps(parms, desiredFps * 1000);
-
-        pickCameraParams(parms);
-
-        // Give the camera a hint that we're recording video.  This can have a big
-        // impact on frame rate.
-        parms.setRecordingHint(true);
-
-        camera.setParameters(parms);
-
-        Camera.Size cameraPreviewSize = parms.getPreviewSize();
-        String previewFacts = cameraPreviewSize.width + "x" + cameraPreviewSize.height +
-                " @" + (mCameraPreviewThousandFps / 1000.0f) + "fps";
-        Log.i(TAG, "Camera config: " + previewFacts);
-
-//        AspectFrameLayout layout = (AspectFrameLayout) findViewById(R.id.continuousCapture_afl);
-
-        Display display = ((WindowManager)getSystemService(WINDOW_SERVICE)).getDefaultDisplay();
-
-        if(display.getRotation() == Surface.ROTATION_0) {
-            camera.setDisplayOrientation(90);
-//            layout.setAspectRatio((double) cameraPreviewSize.height / cameraPreviewSize.width);
-        } else if(display.getRotation() == Surface.ROTATION_270) {
-//            layout.setAspectRatio((double) cameraPreviewSize.height / cameraPreviewSize.width);
-            camera.setDisplayOrientation(180);
-        } else {
-            // Set the preview aspect ratio.
-//            layout.setAspectRatio((double) cameraPreviewSize.width / cameraPreviewSize.height);
-        }
-
-    }
-
-    private void pickCameraParams(Camera.Parameters parms){
-        // FPS 提取
-        List<int[]> supported = parms.getSupportedPreviewFpsRange();
-
-        List<Integer> fpsList = new ArrayList<>();
-        for (int[] entry : supported) {
-            Log.e(TAG, "fps: " + entry[0] + " " + entry[1]);
-            if(!fpsList.contains(entry[1] / 1000)) {
-                fpsList.add(entry[1] / 1000);
-            }
-        }
-        ArrayAdapter<Integer> adapter = new ArrayAdapter<Integer>(this,
-                android.R.layout.simple_list_item_1, fpsList);
-
-        fpsSpinner.setAdapter(adapter);
-
-        // 白平衡
-
-    }
-
-    /**
-     * Stops camera preview, and releases the camera to the system.
-     */
-    private void releaseCamera() {
-        if (camera != null) {
-            camera.stopPreview();
-            camera.release();
-            camera = null;
-            Log.d(TAG, "releaseCamera -- done");
-        }
-    }
 
     @Override
     public void onFrameAvailable(SurfaceTexture surfaceTexture) {
@@ -374,6 +248,11 @@ public class CameraActivity extends Activity implements
                     frameAlpha.setText("透明50");
                 }
                 break;
+            case R.id.camera_switch:
+                CameraController.switchCamera();
+                CameraController.openCamera(this, VIDEO_WIDTH, VIDEO_HEIGHT, DESIRED_PREVIEW_FPS);
+                CameraController.startPreview(cameraTexture);
+                break;
         }
     }
 
@@ -381,15 +260,15 @@ public class CameraActivity extends Activity implements
         // 刷新视频帧
         public static final int MSG_FRAME_AVAILABLE = 0;
 
-        private WeakReference<CameraActivity> mWeakActivity;
+        private WeakReference<CameraSurfaceViewActivity> mWeakActivity;
 
-        public CameraHandler(CameraActivity activity){
-            mWeakActivity = new WeakReference<CameraActivity>(activity);
+        public CameraHandler(CameraSurfaceViewActivity activity){
+            mWeakActivity = new WeakReference<CameraSurfaceViewActivity>(activity);
         }
 
         @Override
         public void handleMessage(Message msg) {
-            CameraActivity activit = mWeakActivity.get();
+            CameraSurfaceViewActivity activit = mWeakActivity.get();
             if (activit == null){
                 Log.e(TAG, "handler activity null");
                 return;
@@ -417,7 +296,9 @@ public class CameraActivity extends Activity implements
             PermissionHelper.launchPermissionSettings(this);
             finish();
         } else {
-            openCamera(VIDEO_WIDTH, VIDEO_HEIGHT, DESIRED_PREVIEW_FPS);
+            if (CameraController.canOpenCamera()){
+                CameraController.openCamera(this, VIDEO_WIDTH, VIDEO_HEIGHT, DESIRED_PREVIEW_FPS);
+            }
         }
     }
 
