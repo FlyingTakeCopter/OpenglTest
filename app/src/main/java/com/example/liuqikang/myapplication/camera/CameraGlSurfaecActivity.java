@@ -105,7 +105,7 @@ public class CameraGlSurfaecActivity extends Activity implements SurfaceTexture.
         frameAlpha.setOnClickListener(this);
         switchCamera.setOnClickListener(this);
 
-        glSurfaceView = (CameraGlSurfaceView) findViewById(R.id.camera_glsurfaceview);
+        glSurfaceView = (CameraGlSurfaceView) findViewById(R.id.camera_glsurfaceview1);
         CameraGlSurfaceView.GLSurfaceListener listener = new CameraGlSurfaceView.GLSurfaceListener() {
             @Override
             public void surfaceCreate(int textureID) {

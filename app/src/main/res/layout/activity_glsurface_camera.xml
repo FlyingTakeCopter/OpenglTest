@@ -10,7 +10,7 @@
         android:layout_height="match_parent"
         android:background="@color/black">
         <com.example.liuqikang.myapplication.camera.CameraGlSurfaceView
-            android:id="@+id/camera_glsurfaceview"
+            android:id="@+id/camera_glsurfaceview1"
             android:layout_width="match_parent"
             android:layout_height="match_parent"/>
 
