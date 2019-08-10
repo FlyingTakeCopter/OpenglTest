@@ -17,7 +17,7 @@ public class CameraGlSurfaceView extends GLSurfaceView implements GLSurfaceView.
 
     private FullFrameRect mFullScreen;
     private WindowSurface displaySurface;
-
+    private GLSurfaceListener listener;
 
     public CameraGlSurfaceView(Context context) {
         super(context);
@@ -35,10 +35,26 @@ public class CameraGlSurfaceView extends GLSurfaceView implements GLSurfaceView.
         setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
     }
 
+    public void init(GLSurfaceListener listener){
+        this.listener = listener;
+    }
+
+    interface GLSurfaceListener{
+        public void surfaceCreate(int textureID);
+        public void onCurrentFps(int fps);
+    }
+
     @Override
     public void onSurfaceCreated(GL10 gl, EGLConfig config) {
         mFullScreen = new FullFrameRect(
                 new Texture2dProgram(Texture2dProgram.ProgramType.TEXTURE_EXT));
+        if (listener != null){
+            listener.surfaceCreate(mFullScreen.getProgram().createTextureObject());
+        }
+    }
+
+    public boolean isScreenNull(){
+        return mFullScreen == null;
     }
 
     @Override
@@ -46,8 +62,26 @@ public class CameraGlSurfaceView extends GLSurfaceView implements GLSurfaceView.
 
     }
 
+    long baseTime = -1;
+
+    public int getFPS() {
+        return drawNum;
+    }
+
+    int drawNum = 0;
+
     @Override
     public void onDrawFrame(GL10 gl) {
+        drawNum++;
+        if (baseTime == -1){
+            baseTime = System.nanoTime();
+        }
+
+        if (System.nanoTime() - baseTime >= 1000000000){
+            baseTime = System.nanoTime();
+            listener.onCurrentFps(drawNum);
+            drawNum = 0;
+        }
         if (surfaceTexture != null && mFullScreen != null){
             surfaceTexture.updateTexImage();
             surfaceTexture.getTransformMatrix(mTmpMatrix);
@@ -66,7 +100,10 @@ public class CameraGlSurfaceView extends GLSurfaceView implements GLSurfaceView.
         requestRender();
     }
 
+    @Override
     public void onPause(){
+        super.onPause();
+
         if (mFullScreen != null){
             mFullScreen.release(false);
             mFullScreen = null;
