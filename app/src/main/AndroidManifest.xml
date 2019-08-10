@@ -20,7 +20,7 @@
         android:screenOrientation="portrait"
         android:theme="@style/NoTitleTranslucentTheme">
         <!--<activity android:name=".MainActivity">-->
-        <activity android:name=".camera.CameraSurfaceViewActivity">
+        <activity android:name=".AllActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -28,6 +28,13 @@
             </intent-filter>
         </activity>
 
+        <activity android:name=".camera.CameraSurfaceViewActivity"
+            android:theme="@style/NoTitleTranslucentTheme"
+            android:screenOrientation="portrait"/>
+
+        <activity android:name=".camera.CameraGlSurfaecActivity"
+            android:theme="@style/NoTitleTranslucentTheme"
+            android:screenOrientation="portrait"/>
     </application>
 
 </manifest>
