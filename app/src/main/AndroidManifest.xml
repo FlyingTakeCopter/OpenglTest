@@ -10,6 +10,7 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <!--写入数据权限-->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
 
     <application
         android:allowBackup="true"
@@ -38,6 +39,10 @@
             android:screenOrientation="portrait"/>
 
         <activity android:name=".camera.CameraTextureViewActivity"
+            android:theme="@style/NoTitleTranslucentTheme"
+            android:screenOrientation="portrait"/>
+
+        <activity android:name=".mediacodec.CameraCodecActivity"
             android:theme="@style/NoTitleTranslucentTheme"
             android:screenOrientation="portrait"/>
     </application>

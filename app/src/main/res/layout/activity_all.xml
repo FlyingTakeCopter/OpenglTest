@@ -41,4 +41,12 @@
         android:text="TextureView"
         />
 
+    <Button
+        android:id="@+id/codecBtn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/cameraTextureBtn"
+        android:layout_centerHorizontal="true"
+        android:text="codec"/>
+
 </RelativeLayout>
