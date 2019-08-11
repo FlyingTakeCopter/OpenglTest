@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <FrameLayout
+        android:id="@+id/camera_frame_layout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/black">
+        <TextureView
+            android:id="@+id/camera_textureview"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"/>
+
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="50dp"
+            android:layout_marginTop="100dp"
+            android:text="在frameLayout中"/>
+    </FrameLayout>
+
+    <TextView
+        android:id="@+id/camera_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="fps"
+        android:textColor="#902000"
+        android:textSize="20sp"
+        android:layout_marginBottom="20dp"/>
+
+    <TextView
+        android:id="@+id/camera_fps"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Preview Fps:  "
+        android:textSize="20sp"
+        android:layout_below="@+id/camera_text"/>
+
+    <Spinner
+        android:id="@+id/spinner_simple"
+        android:layout_below="@+id/camera_text"
+        android:layout_toRightOf="@+id/camera_fps"
+        android:layout_width="60dp"
+        android:layout_height="30dp"
+        android:background="@color/white"/>
+
+    <Button
+        android:id="@+id/camera_framelayout_move"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="frameLayout移动:关"
+        android:layout_alignParentRight="true"/>
+
+    <Button
+        android:id="@+id/camera_surfaceView_move"
+        android:layout_below="@+id/camera_framelayout_move"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="surface移动:关"
+        android:layout_alignParentRight="true"/>
+
+    <Button
+        android:id="@+id/camera_framelayout_rotation"
+        android:layout_below="@+id/camera_surfaceView_move"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="旋转90"
+        android:layout_alignParentRight="true"/>
+
+    <Button
+        android:id="@+id/camera_framelayout_scale"
+        android:layout_below="@+id/camera_framelayout_rotation"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="缩放0.5"
+        android:layout_alignParentRight="true"/>
+
+    <Button
+        android:id="@+id/camera_framelayout_translation"
+        android:layout_below="@+id/camera_framelayout_scale"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Y偏移100"
+        android:layout_alignParentRight="true"/>
+
+    <Button
+        android:id="@+id/camera_framelayout_alpha"
+        android:layout_below="@+id/camera_framelayout_translation"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="透明度50%"
+        android:layout_alignParentRight="true"/>
+
+    <Button
+        android:id="@+id/camera_btn"
+        android:layout_below="@+id/camera_framelayout_alpha"
+        android:layout_width="wrap_content"
+        android:layout_height="50dp"
+        android:layout_centerInParent="true"
+        android:text="动画"
+        android:layout_alignParentRight="true"/>
+
+    <Button
+        android:id="@+id/camera_switch"
+        android:layout_below="@+id/camera_btn"
+        android:layout_width="wrap_content"
+        android:layout_height="50dp"
+        android:layout_centerInParent="true"
+        android:text="切换前后"
+        android:layout_alignParentRight="true"/>
+</RelativeLayout>

@@ -18,6 +18,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:screenOrientation="portrait"
+        android:hardwareAccelerated="true"
         android:theme="@style/NoTitleTranslucentTheme">
         <!--<activity android:name=".MainActivity">-->
         <activity android:name=".AllActivity">
@@ -33,6 +34,10 @@
             android:screenOrientation="portrait"/>
 
         <activity android:name=".camera.CameraGlSurfaecActivity"
+            android:theme="@style/NoTitleTranslucentTheme"
+            android:screenOrientation="portrait"/>
+
+        <activity android:name=".camera.CameraTextureViewActivity"
             android:theme="@style/NoTitleTranslucentTheme"
             android:screenOrientation="portrait"/>
     </application>

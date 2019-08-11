@@ -9,11 +9,13 @@ import android.widget.Button;
 
 import com.example.liuqikang.myapplication.camera.CameraGlSurfaecActivity;
 import com.example.liuqikang.myapplication.camera.CameraSurfaceViewActivity;
+import com.example.liuqikang.myapplication.camera.CameraTextureViewActivity;
 
 public class AllActivity extends Activity implements View.OnClickListener {
 
     Button surfaceViewBtn;
     Button glSurfaceViewBtn;
+    Button textureViewBtn;
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -21,9 +23,10 @@ public class AllActivity extends Activity implements View.OnClickListener {
 
         surfaceViewBtn = (Button) findViewById(R.id.cameraSurfaceBtn);
         glSurfaceViewBtn = (Button)findViewById(R.id.cameraGlSurfaceBtn);
-
+        textureViewBtn = (Button) findViewById(R.id.cameraTextureBtn);
         surfaceViewBtn.setOnClickListener(this);
         glSurfaceViewBtn.setOnClickListener(this);
+        textureViewBtn.setOnClickListener(this);
     }
 
     @Override
@@ -34,6 +37,9 @@ public class AllActivity extends Activity implements View.OnClickListener {
                 break;
             case R.id.cameraGlSurfaceBtn:
                 startActivity(new Intent(this, CameraGlSurfaecActivity.class));
+                break;
+            case R.id.cameraTextureBtn:
+                startActivity(new Intent(this, CameraTextureViewActivity.class));
                 break;
         }
     }
